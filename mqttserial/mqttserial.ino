@@ -40,8 +40,7 @@ void  readString(char *s, int n) {
 
 void connect(const char *server, int port) {
   Serial.write((byte) CONNECT);
-  int l = strlen(server);
-  writeInt(l);
+  writeInt(strlen(server));
   Serial.write(server);
   writeInt(port);
 }
@@ -52,25 +51,21 @@ void disconnect() {
 
 void publish(const char *topic, const char *msg) {
   Serial.write((byte) PUBLISH);
-  int l = strlen(topic);
-  writeInt(l);
+  writeInt(strlen(topic));
   Serial.write(topic);
-  l = strlen(msg);
-  writeInt(l);
+  writeInt(strlen(msg));
   Serial.write(msg);
 }
 
 void subscribe(const char *topic) {
   Serial.write((byte) SUBSCRIBE);
-  int l = strlen(topic);
-  writeInt(l);
+  writeInt(strlen(topic));
   Serial.write(topic);
 }
 
 bool startsWith(const char *pre, const char *str){
-    size_t lenpre = strlen(pre),
-           lenstr = strlen(str);
-    return lenstr < lenpre ? false : strncmp(pre, str, lenpre) == 0;
+  size_t lenpre = strlen(pre), lenstr = strlen(str);
+  return lenstr < lenpre ? false : strncmp(pre, str, lenpre) == 0;
 }
 
 void msgReceived(const char *topic, const char * msg) {
@@ -82,15 +77,15 @@ void msgReceived(const char *topic, const char * msg) {
   char* subtopic = &strchr(topic, '/')[1];
   if (startsWith("led/", subtopic)) {
     int n = atoi(&subtopic[4]);
-    if (n <= NUMBER_OF_LEDS) {
+    if (n >= 1 && n <= NUMBER_OF_LEDS) {
       int state = (strcmp(msg,"on") == 0  ? LOW : HIGH);
       sprintf(buffer,"Switch %s led %d",msg, n);
       publish("pcreply/debug", buffer);     
       led(n-1, state);
     }
-  } if (startsWith("analog/", subtopic)) {
+  } else if (startsWith("analog/", subtopic)) {
     int n = atoi(&subtopic[7]);
-    if (n <= 7) {
+    if ( n >= 0 && n <= 7) {
       int a = analogRead(n);
       sprintf(buffer,"A%d: %d",n, a);
       publish("pcreply/analog", buffer);     
@@ -117,6 +112,8 @@ void setup() {
     pinMode(leds[i], OUTPUT);
     digitalWrite(leds[i], HIGH);
   }
+  pinMode(POWER,OUTPUT);
+  pinMode(RESET,OUTPUT);
   Serial.begin(9600);
   connect("192.168.0.101", 1883);
   delay(2000);
@@ -124,7 +121,7 @@ void setup() {
 }
 
 void loop() {
-  if(Serial.available() >= 2) {
+  if (Serial.available() >= 2) {
     readString(topic, MAX_TOPIC_SIZE);
     readString(msg, MAX_MSG_SIZE);
     msgReceived(topic, msg);
